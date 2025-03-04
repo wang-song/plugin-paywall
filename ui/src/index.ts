@@ -2,22 +2,35 @@ import { definePlugin } from "@halo-dev/console-shared";
 import HomeView from "./views/HomeView.vue";
 import { IconPlug } from "@halo-dev/components";
 import { markRaw } from "vue";
+import { extensionPaywall } from "./paywall";
+
+interface Editor {
+  chain: () => {
+    focus: () => {
+      setNode: (type: string, attrs: Record<string, any>) => {
+        run: () => void;
+      };
+    };
+  };
+  getSelectedText: () => string;
+}
 
 export default definePlugin({
-  components: {},
+  components: {
+  },
   routes: [
     {
       parentName: "Root",
       route: {
-        path: "/example",
-        name: "Example",
+        path: "/vmq",
+        name: "VMQ",
         component: HomeView,
         meta: {
-          title: "示例页面",
+          title: "V免签配置",
           searchable: true,
           menu: {
-            name: "示例页面",
-            group: "示例分组",
+            name: "V免签配置",
+            group: "支付",
             icon: markRaw(IconPlug),
             priority: 0,
           },
@@ -25,5 +38,11 @@ export default definePlugin({
       },
     },
   ],
-  extensionPoints: {},
+  extensionPoints: {
+    "default:editor:extension:create": () => {
+      return [
+        markRaw(extensionPaywall),
+      ];
+    },
+  },
 });

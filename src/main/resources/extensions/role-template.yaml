@@ -1,0 +1,20 @@
+# apiVersion: v1alpha1
+# kind: Role
+# metadata:
+#   name: plugin-encrypt-anonymous
+#   labels:
+#     halo.run/role-template: "true"
+#     halo.run/hidden: "true"
+#     # 关键配置：聚合到 anonymous 角色，这样所有人都能访问
+#     rbac.authorization.halo.run/aggregate-to-anonymous: "true"
+# rules:
+#   # 资源型规则
+# #  - apiGroups: ["plugin-encrypt.halo.run"]
+# #    resources: ["plugin-encrypt/encrypt"]
+# #    resourceNames: [ "decrypt" ]
+# #    verbs: ["create","post"]
+#   # 非资源型规则，因为这是一个自定义的API路径
+#   - nonResourceURLs: [
+#     "/apis/plugin-encrypt.halo.run/v1alpha1/encrypt/decrypt"
+#   ]
+#     verbs: ["create"]

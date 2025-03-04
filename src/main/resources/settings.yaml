@@ -1,0 +1,19 @@
+apiVersion: v1alpha1
+kind: Setting
+metadata:
+  name: plugin-paywall-settings
+spec:
+  forms:
+    - group: basic
+      label: 基础设置
+      formSchema:
+        - $formkit: text
+          name: vmq_url
+          label: V免签接口地址
+          validation: required
+          value: ""
+        - $formkit: text
+          name: vmq_key
+          label: V免签通信密钥
+          validation: required
+          value: "" 

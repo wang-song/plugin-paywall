@@ -1,172 +1,284 @@
 <script setup lang="ts">
-import confetti from "canvas-confetti";
-import { onMounted } from "vue";
-import RiShareCircleLine from "~icons/ri/share-circle-line";
-import RiCodeBoxLine from "~icons/ri/code-box-line";
-import RiBookReadLine from "~icons/ri/book-read-line";
-import RiComputerLine from "~icons/ri/computer-line";
-import RiArrowRightSLine from "~icons/ri/arrow-right-s-line";
+import { ref, onMounted } from "vue";
+import { Toast } from "@halo-dev/components";
+import axios from "axios";
+import RiSaveLine from "~icons/ri/save-line";
+import RiSettings2Line from "~icons/ri/settings-2-line";
+import RiTestTubeLine from "~icons/ri/test-tube-line";
 
-onMounted(() => {
-  confetti({
-    particleCount: 100,
-    spread: 70,
-    origin: { y: 0.6, x: 0.58 },
-  });
+const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true
 });
+
+interface VmqConfig {
+  serverUrl: string;
+  key: string;
+  notifyUrl: string;
+}
+
+const formState = ref<VmqConfig>({
+  serverUrl: "",
+  key: "",
+  notifyUrl: "",
+});
+
+const loading = ref(false);
+const testing = ref(false);
+
+onMounted(async () => {
+  try {
+    const { data } = await apiClient.get(
+      `/apis/api.plugin.halo.run/v1alpha1/plugins/plugin-vmq/settings/vmq-settings`
+    );
+    if (data.spec.forms) {
+      formState.value = {
+        serverUrl: data.spec.forms.serverUrl || "",
+        key: data.spec.forms.key || "",
+        notifyUrl: data.spec.forms.notifyUrl || ""
+      };
+    }
+  } catch (e) {
+    console.error("获取配置失败:", e);
+    Toast.error("获取配置失败");
+  }
+});
+
+const handleSubmit = async () => {
+  loading.value = true;
+  try {
+    await apiClient.put(
+      `/apis/api.plugin.halo.run/v1alpha1/plugins/plugin-vmq/settings/vmq-settings`,
+      {
+        spec: {
+          forms: formState.value
+        }
+      }
+    );
+    Toast.success("保存成功");
+  } catch (e) {
+    console.error("保存失败:", e);
+    Toast.error("保存失败");
+  } finally {
+    loading.value = false;
+  }
+};
+
+const testConnection = async () => {
+  if (!formState.value.serverUrl || !formState.value.key) {
+    Toast.error("请先填写服务器地址和通信密钥");
+    return;
+  }
+
+  testing.value = true;
+  try {
+    const response = await apiClient.post(
+      `/apis/api.plugin.halo.run/v1alpha1/plugins/plugin-vmq/test-connection`,
+      formState.value
+    );
+    if (response.data.success) {
+      Toast.success("连接测试成功");
+    } else {
+      Toast.error(response.data.message || "连接测试失败");
+    }
+  } catch (e) {
+    console.error("测试连接失败:", e);
+    Toast.error("测试连接失败");
+  } finally {
+    testing.value = false;
+  }
+};
 </script>
 
 <template>
-  <section id="plugin-starter">
-    <div class="wrapper">
-      <span class="title"> 你已经成功运行起了插件！ </span>
-      <span class="message">你可以点击下方文档继续下一步</span>
-      <div class="docs">
-        <a
-          href="https://docs.halo.run/developer-guide/plugin/publish"
-          class="docs__box"
-          target="_blank"
-        >
-          <h2 class="docs__box-title"><RiShareCircleLine />发布一个插件</h2>
-          <span class="docs__box-message">
-            了解如何与我们的社区分享您的扩展。
-          </span>
-          <span class="docs__box-arrow">
-            <RiArrowRightSLine />
-          </span>
-        </a>
-        <a
-          href="https://docs.halo.run/category/%E5%9F%BA%E7%A1%80"
-          class="docs__box"
-          target="_blank"
-        >
-          <h2 class="docs__box-title"><RiComputerLine />基础概览</h2>
-          <span class="docs__box-message">
-            了解插件的项目结构、生命周期、资源配置等。
-          </span>
-          <span class="docs__box-arrow">
-            <RiArrowRightSLine />
-          </span>
-        </a>
-        <a
-          href="https://docs.halo.run/developer-guide/plugin/examples/todolist"
-          class="docs__box group"
-          target="_blank"
-        >
-          <h2 class="docs__box-title"><RiBookReadLine />示例插件</h2>
-          <span class="docs__box-message">帮助你从 0 到 1 完成一个插件。</span>
-          <span class="docs__box-arrow">
-            <RiArrowRightSLine />
-          </span>
-        </a>
-        <a
-          href="https://docs.halo.run/category/api-%E5%8F%82%E8%80%83"
-          class="docs__box"
-          target="_blank"
-        >
-          <h2 class="docs__box-title"><RiCodeBoxLine />API 参考</h2>
-          <span class="docs__box-message">插件中的 API 列表。</span>
-          <span class="docs__box-arrow">
-            <RiArrowRightSLine />
-          </span>
-        </a>
-      </div>
+  <div class="vmq-settings">
+    <div class="settings-header">
+      <RiSettings2Line class="icon" />
+      <h1 class="title">V免签配置</h1>
     </div>
-  </section>
+
+    <div class="settings-form">
+      <form @submit.prevent="handleSubmit">
+        <div class="form-group">
+          <label for="serverUrl">服务器地址</label>
+          <input
+            id="serverUrl"
+            v-model="formState.serverUrl"
+            type="text"
+            class="form-input"
+            placeholder="请输入V免签服务器地址，如：http://your-vmq-server.com"
+            required
+          />
+          <div class="form-help">V免签服务端的访问地址，需要确保Halo服务器可以访问</div>
+        </div>
+
+        <div class="form-group">
+          <label for="key">通信密钥</label>
+          <input
+            id="key"
+            v-model="formState.key"
+            type="password"
+            class="form-input"
+            placeholder="请输入V免签通信密钥"
+            required
+          />
+          <div class="form-help">在V免签后台系统设置中配置的通信密钥</div>
+        </div>
+
+        <div class="form-group">
+          <label for="notifyUrl">回调地址</label>
+          <input
+            id="notifyUrl"
+            v-model="formState.notifyUrl"
+            type="text"
+            class="form-input"
+            placeholder="请输入支付成功后的回调通知地址"
+            required
+          />
+          <div class="form-help">支付成功后的回调通知地址，需要确保V免签服务器可以访问</div>
+        </div>
+
+        <div class="button-group">
+          <button type="submit" class="btn btn-primary" :disabled="loading">
+            <RiSaveLine class="icon" />
+            {{ loading ? "保存中..." : "保存配置" }}
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-secondary" 
+            :disabled="testing"
+            @click="testConnection"
+          >
+            <RiTestTubeLine class="icon" />
+            {{ testing ? "测试中..." : "测试连接" }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </template>
 
 <style lang="scss" scoped>
-#plugin-starter {
-  height: 100vh;
+.vmq-settings {
+  padding: 2rem;
   background-color: #f8fafc;
 }
 
-.wrapper {
+.settings-header {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
   align-items: center;
-  height: 100vh;
-  gap: 1.5rem;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+
+  .icon {
+    font-size: 1.5rem;
+    color: #3b82f6;
+  }
 
   .title {
-    font-weight: 700;
-    font-size: 1.25rem;
-    line-height: 1.75rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1f2937;
   }
+}
 
-  .message {
+.settings-form {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  max-width: 600px;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+
+  label {
+    display: block;
     font-size: 0.875rem;
-    line-height: 1.25rem;
-    color: #4b5563;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.5rem;
   }
 
-  .docs {
-    display: grid;
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-    gap: 1rem;
-    max-width: 48rem;
+  .form-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    transition: all 0.2s;
 
-    .docs__box {
-      background-color: #fff;
-      border-radius: 0.375rem;
-      padding: 0.75rem;
-      transition-property: all;
-      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-      transition-duration: 300ms;
-      cursor: pointer;
-      filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.1))
-        drop-shadow(0 1px 1px rgb(0 0 0 / 0.06));
+    &:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgb(59 130 246 / 0.1);
+    }
 
-      &:hover {
-        box-shadow:
-          0 0 0 0px #fff,
-          0 0 0 1px rgb(59 130 246 / 0.5),
-          0 0 #0000;
-      }
-
-      .docs__box-title {
-        display: flex;
-        flex-direction: row;
-        font-size: 1.125rem;
-        line-height: 1.75rem;
-        font-weight: 700;
-        margin-bottom: 2rem;
-        gap: 0.5rem;
-        align-items: center;
-      }
-
-      .docs__box-message {
-        font-size: 0.875rem;
-        line-height: 1.25rem;
-        color: #4b5563;
-      }
-
-      .docs__box-arrow {
-        pointer-events: none;
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        transition-property: all;
-        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 150ms;
-        color: #d1d5db;
-      }
-
-      &:hover {
-        .docs__box-arrow {
-          color: #9ca3af;
-          transform: translate(00.375rem, 0) rotate(0) skewX(0) skewY(0)
-            scaleX(1) scaleY(1);
-        }
-      }
+    &::placeholder {
+      color: #9ca3af;
     }
   }
 
-  @media (min-width: 640px) {
-    .docs {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+  .form-help {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #6b7280;
+  }
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+
+  .icon {
+    font-size: 1.25rem;
+  }
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+
+  &:hover:not(:disabled) {
+    background-color: #2563eb;
+  }
+
+  &:disabled {
+    background-color: #93c5fd;
+  }
+}
+
+.btn-secondary {
+  background-color: #e5e7eb;
+  color: #374151;
+
+  &:hover:not(:disabled) {
+    background-color: #d1d5db;
+  }
+
+  &:disabled {
+    background-color: #f3f4f6;
+    color: #9ca3af;
   }
 }
 </style>
