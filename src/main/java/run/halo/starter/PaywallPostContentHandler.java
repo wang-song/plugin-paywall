@@ -21,124 +21,6 @@ public class PaywallPostContentHandler implements ReactivePostContentHandler {
 
     private final ReactiveExtensionClient client;
 
-    private static final String PAYWALL_STYLES = """
-            <style>
-            .paywall-container {
-                margin: 20px 0;
-                padding: 20px;
-                border: 1px solid #e0e0e0;
-                border-radius: 8px;
-                background-color: #f9f9f9;
-            }
-            .paywall-preview {
-                margin-bottom: 15px;
-                color: #666;
-            }
-            .paywall-payment-area {
-                text-align: center;
-                padding: 15px;
-                background-color: #fff;
-                border-radius: 4px;
-            }
-            .paywall-payment-info {
-                margin-bottom: 10px;
-                color: #333;
-                font-weight: bold;
-            }
-            .paywall-purchase-btn {
-                padding: 8px 20px;
-                background-color: #007bff;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 14px;
-            }
-            .paywall-purchase-btn:hover {
-                background-color: #0056b3;
-            }
-            .paywall-content {
-                display: none;
-            }
-            </style>
-            """;
-
-    private static final String PAYWALL_SCRIPT = """
-            <script>
-            function handlePurchase(contentId) {
-                // 获取价格
-                const button = document.querySelector(`button[data-content-id="${contentId}"]`);
-                const price = button.getAttribute('data-price');
-                
-                // 调用购买接口
-                fetch(`/apis/api.plugin.halo.run/v1alpha1/plugins/plugin-paywall/purchase/${contentId}`, {
-                    method: 'POST'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // 显示支付二维码
-                    alert('请扫码支付：' + data.qrCodeUrl + '\\n价格：' + price + ' 元');
-                    
-                    // 开始轮询支付状态
-                    checkPaymentStatus(contentId, data.orderId);
-                })
-                .catch(error => {
-                    console.error('购买请求失败:', error);
-                    alert('购买请求失败，请稍后重试');
-                });
-            }
-
-            function checkPaymentStatus(contentId, orderId) {
-                const checkStatus = () => {
-                    fetch(`/apis/api.plugin.halo.run/v1alpha1/plugins/plugin-paywall/purchase/status/${orderId}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.status === 'SUCCESS') {
-                                // 支付成功，获取内容
-                                fetchContent(contentId);
-                            } else if (data.status === 'PENDING') {
-                                // 继续轮询
-                                setTimeout(checkStatus, 3000);
-                            } else {
-                                alert('支付失败：' + data.message);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('检查支付状态失败:', error);
-                            alert('检查支付状态失败，请刷新页面重试');
-                        });
-                };
-                
-                checkStatus();
-            }
-
-            function fetchContent(contentId) {
-                fetch(`/apis/api.plugin.halo.run/v1alpha1/plugins/plugin-paywall/content/${contentId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.isPaid === 'true') {
-                            // 更新内容
-                            const container = document.querySelector(`#content-${contentId}`);
-                            container.innerHTML = data.content;
-                            container.style.display = 'block';
-                            
-                            // 隐藏支付区域
-                            const paymentArea = container.parentElement.querySelector('.paywall-payment-area');
-                            paymentArea.style.display = 'none';
-                            
-                            // 隐藏预览区域
-                            const previewArea = container.parentElement.querySelector('.paywall-preview');
-                            previewArea.style.display = 'none';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('获取内容失败:', error);
-                        alert('获取内容失败，请刷新页面重试');
-                    });
-            }
-            </script>
-            """;
-
     @Override
     public Mono<PostContentContext> handle(PostContentContext postContentContext) {
         return Mono.just(postContentContext)
@@ -149,13 +31,26 @@ public class PaywallPostContentHandler implements ReactivePostContentHandler {
                     
                     // 处理付费内容区块
                     Elements paywallElements = doc.select("div[data-type=paywall]");
-                    log.info("找到 {} 个付费内容区块", paywallElements.size());
+                    log.info("找到 {} 个付费模块", paywallElements.size());
                     
                     if (!paywallElements.isEmpty()) {
                         // 只有在有付费内容时才注入样式和脚本
-                        Element body = doc.body();
-                        body.append(PAYWALL_STYLES);
-                        body.append(PAYWALL_SCRIPT);
+                        Element head = doc.head();
+                        if (head == null) {
+                            head = doc.createElement("head");
+                            doc.prependChild(head);
+                        }
+
+                        // 添加 CSS
+                        Element cssLink = doc.createElement("link");
+                        cssLink.attr("rel", "stylesheet");
+                        cssLink.attr("href", "/plugins/paywall/assets/res/paywall.css");
+                        head.appendChild(cssLink);
+                        
+                        // 添加 JS
+                        Element script = doc.createElement("script");
+                        script.attr("src", "/plugins/paywall/assets/res/paywall.js");
+                        head.appendChild(script);
                     }
                     
                     // 创建一个 Mono 序列来处理所有付费内容
@@ -180,13 +75,14 @@ public class PaywallPostContentHandler implements ReactivePostContentHandler {
                                     .attr("class", "paywall-preview");
                                 if (previewContent != null && !previewContent.isEmpty()) {
                                     previewArea.html(previewContent);
-                                } else {
-                                    // 如果没有指定预览内容，截取原始内容的前100个字符
-                                    String preview = originalContent.length() > 100 ? 
-                                        originalContent.substring(0, 100) + "..." : 
-                                        originalContent;
-                                    previewArea.html(preview);
                                 }
+                                // else {
+                                //     // 如果没有指定预览内容，截取原始内容的前100个字符
+                                //     String preview = originalContent.length() > 100 ?
+                                //         originalContent.substring(0, 100) + "..." :
+                                //         originalContent;
+                                //     previewArea.html(preview);
+                                // }
                                 container.appendChild(previewArea);
                                 
                                 // 创建付费提示区域
@@ -219,22 +115,32 @@ public class PaywallPostContentHandler implements ReactivePostContentHandler {
                                 // 替换原始元素
                                 element.replaceWith(container);
                                 
-                                // 创建 PaywallContent 资源
-                                PaywallContent paywallContent = new PaywallContent();
-                                paywallContent.setMetadata(new run.halo.app.extension.Metadata());
-                                paywallContent.getMetadata().setName(contentId);
-                                
-                                PaywallContent.PaywallContentSpec spec = new PaywallContent.PaywallContentSpec();
+                                // 创建 PaymentRecord 资源
+                                PaymentRecord paymentRecord = new PaymentRecord();
+                                paymentRecord.setMetadata(new run.halo.app.extension.Metadata());
+                                // 为资源设置名称 用于查询
+                                paymentRecord.getMetadata().setName(contentId);
+
+                                PaymentRecord.PaymentRecordSpec spec = new PaymentRecord.PaymentRecordSpec();
+                                // 为资源设置内容ID
                                 spec.setContentId(contentId);
+                                // 为资源付费内容
                                 spec.setContent(originalContent);
+                                // 为资源设置预览内容
+                                spec.setPreviewContent(previewContent);
+                                // 为资源付费内容设置价格
                                 spec.setPrice(Double.parseDouble(price));
+                                // 为资源设置创建时间
                                 spec.setCreateTime(Instant.now().getEpochSecond());
-                                spec.setExpireTime(Instant.now().plusSeconds(24 * 60 * 60).getEpochSecond());
-                                
-                                paywallContent.setSpec(spec);
-                                
+                                // spec.setExpireTime(Instant.now().plusSeconds(24 * 60 * 60).getEpochSecond());
+
+
+                                spec.setPayStatus(PayStatus.PENDING.name());
+
+                                paymentRecord.setSpec(spec);
+
                                 // 异步保存到 Kubernetes
-                                client.create(paywallContent)
+                                client.create(paymentRecord)
                                     .doOnSuccess(created -> log.info("成功创建付费内容资源：contentId={}", contentId))
                                     .doOnError(error -> log.error("创建付费内容资源失败：", error))
                                     .subscribe();

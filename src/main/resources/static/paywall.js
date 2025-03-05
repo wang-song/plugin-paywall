@@ -28,20 +28,6 @@ function closePaymentModal(contentId) {
     }
 }
 
-// 显示付费内容
-function showPaywallContent(contentId) {
-    const paywallBlock = document.querySelector(`[data-content-id="${contentId}"]`);
-    if (paywallBlock) {
-        const preview = paywallBlock.querySelector('.paywall-preview');
-        const content = paywallBlock.querySelector('.paywall-content');
-        
-        if (preview && content) {
-            preview.style.display = 'none';
-            content.style.display = 'block';
-        }
-    }
-}
-
 // 更新支付状态显示
 function updatePaymentStatus(contentId, message) {
     const statusElement = document.getElementById(`payment-status-${contentId}`);
@@ -50,22 +36,35 @@ function updatePaymentStatus(contentId, message) {
     }
 }
 
-// 处理支付
-async function handlePayment(contentId, price) {
-    // 创建支付弹窗
-    const modal = createPaymentModal(contentId, price);
-    
+// 显示付费内容
+function showPaywallContent(contentId) {
+    const container = document.querySelector(`#content-${contentId}`);
+    if (container) {
+        container.innerHTML = data.content;
+        container.style.display = 'block';
+        
+        // 隐藏支付区域
+        const paymentArea = container.parentElement.querySelector('.paywall-payment-area');
+        if (paymentArea) paymentArea.style.display = 'none';
+        
+        // 隐藏预览区域
+        const previewArea = container.parentElement.querySelector('.paywall-preview');
+        if (previewArea) previewArea.style.display = 'none';
+    }
+}
+
+// 处理购买操作
+async function handlePurchase(contentId) {
     try {
-        // 创建支付订单
-        const response = await fetch('/apis/api.plugin.halo.run/v1alpha1/plugins/plugin-paywall/payment', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                contentId: contentId,
-                price: price
-            })
+        const button = document.querySelector(`button[data-content-id="${contentId}"]`);
+        const price = button.getAttribute('data-price');
+        
+        // 创建支付弹窗
+        const modal = createPaymentModal(contentId, price);
+        
+        // 调用购买接口
+        const response = await fetch(`/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/${contentId}`, {
+            method: 'POST'
         });
         
         if (!response.ok) {
@@ -83,22 +82,23 @@ async function handlePayment(contentId, price) {
         // 开始轮询支付状态
         const checkPaymentStatus = async () => {
             try {
-                const statusResponse = await fetch(`/apis/api.plugin.halo.run/v1alpha1/plugins/plugin-paywall/payment/${data.orderId}/status`);
+                const statusResponse = await fetch(`/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/status/${contentId}`);
                 if (!statusResponse.ok) {
                     throw new Error('检查支付状态失败');
                 }
                 
                 const statusData = await statusResponse.json();
                 
-                if (statusData.status === 'SUCCESS') {
+                if (statusData.payStatus === 'SUCCESS') {
                     // 支付成功
                     updatePaymentStatus(contentId, '支付成功！正在加载内容...');
                     setTimeout(() => {
                         closePaymentModal(contentId);
-                        showPaywallContent(contentId);
+                        // 获取内容
+                        fetchContent(contentId);
                     }, 1500);
                     return;
-                } else if (statusData.status === 'FAILED') {
+                } else if (statusData.payStatus === 'FAILED') {
                     updatePaymentStatus(contentId, '支付失败，请重试');
                     setTimeout(() => {
                         closePaymentModal(contentId);
@@ -117,7 +117,7 @@ async function handlePayment(contentId, price) {
         
         // 开始检查支付状态
         checkPaymentStatus();
-        
+
     } catch (error) {
         console.error('处理支付失败:', error);
         updatePaymentStatus(contentId, '创建支付订单失败，请重试');
@@ -125,6 +125,32 @@ async function handlePayment(contentId, price) {
             closePaymentModal(contentId);
         }, 2000);
     }
+}
+
+// 获取付费内容
+function fetchContent(contentId) {
+    fetch(`/apis/plugin-paywall.halo.run/v1alpha1/paywall/content/${contentId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.payStatus === 'SUCCESS') {
+                // 更新内容
+                const container = document.querySelector(`#content-${contentId}`);
+                container.innerHTML = data.content;
+                container.style.display = 'block';
+                
+                // 隐藏支付区域
+                const paymentArea = container.parentElement.querySelector('.paywall-payment-area');
+                paymentArea.style.display = 'none';
+                
+                // 隐藏预览区域
+                const previewArea = container.parentElement.querySelector('.paywall-preview');
+                previewArea.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('获取内容失败:', error);
+            alert('获取内容失败，请刷新页面重试');
+        });
 }
 
 // 页面加载完成后检查已购买的内容
@@ -168,7 +194,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${preview ? `<div class="paywall-preview">${preview}</div>` : ''}
                 </div>
                 <div class="paywall-actions">
-                    <button class="purchase-button" onclick="handlePurchase('${contentId}', '${price}')">
+                    <button class="purchase-button" onclick="handlePurchase('${contentId}')">
                         立即购买
                     </button>
                 </div>
@@ -202,49 +228,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         return false;
     }
     
-    // 处理购买操作
-    window.handlePurchase = async function(contentId, price) {
-        try {
-            const response = await fetch('/apis/api.plugin.halo.run/v1alpha1/plugins/paywall/purchase', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    contentId: contentId,
-                    price: price
-                })
-            });
-            
-            if (response.ok) {
-                const result = await response.json();
-                // 打开支付二维码
-                window.open(result.qrCodeUrl, '_blank');
-                
-                // 开始轮询支付状态
-                pollPaymentStatus(contentId);
-            }
-        } catch (error) {
-            console.error('Purchase failed:', error);
-        }
-    };
-    
-    // 轮询支付状态
-    function pollPaymentStatus(contentId) {
-        const interval = setInterval(async () => {
-            const purchased = await checkPurchaseStatus(contentId);
-            if (purchased) {
-                clearInterval(interval);
-                location.reload(); // 刷新页面显示内容
-            }
-        }, 3000); // 每3秒检查一次
-        
-        // 5分钟后停止轮询
-        setTimeout(() => {
-            clearInterval(interval);
-        }, 5 * 60 * 1000);
-    }
-    
     // 页面加载完成后初始化
     document.addEventListener('DOMContentLoaded', initPaywall);
-})(); 
+})();
+
+
+// 生成内容ID
+function generateContentId(prefix) {
+    return prefix + '-' + getClientId();
+}
+
+// 生成或获取客户端ID
+function getClientId() {
+    let clientId = localStorage.getItem('paywall_client_id');
+    if (!clientId) {
+        // 优先使用 crypto.randomUUID()
+        if (crypto.randomUUID) {
+            clientId = crypto.randomUUID();
+        } else {
+            // 后备方案
+            clientId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        localStorage.setItem('paywall_client_id', clientId);
+    }
+    return clientId;
+}

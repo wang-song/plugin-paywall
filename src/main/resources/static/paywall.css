@@ -49,7 +49,64 @@
     background-color: #1557b0;
 }
 
-/* 支付弹窗样式 */
+/* 付费内容容器 */
+.paywall-container {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #f8fafc;
+}
+
+/* 预览区域 */
+.paywall-preview {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background-color: #f1f5f9;
+    border-radius: 4px;
+    color: #64748b;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* 支付区域 */
+.paywall-payment-area {
+    text-align: center;
+    padding: 1.5rem;
+    background-color: #fff;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.paywall-payment-info {
+    margin-bottom: 1rem;
+    color: #0f172a;
+    font-weight: 600;
+    font-size: 1.125rem;
+}
+
+/* 购买按钮 */
+.paywall-purchase-btn {
+    padding: 0.75rem 2rem;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.paywall-purchase-btn:hover {
+    background-color: #2563eb;
+}
+
+/* 付费内容 */
+.paywall-content {
+    display: none;
+}
+
+/* 支付弹窗 */
 .payment-modal {
     position: fixed;
     top: 0;
@@ -71,6 +128,7 @@
     width: 90%;
     text-align: center;
     position: relative;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .payment-title {
@@ -83,7 +141,7 @@
 .payment-amount {
     font-size: 2rem;
     font-weight: 700;
-    color: #1a73e8;
+    color: #3b82f6;
     margin-bottom: 1.5rem;
 }
 
@@ -94,6 +152,8 @@
 .payment-qrcode img {
     max-width: 200px;
     height: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
 }
 
 .payment-status {
@@ -176,4 +236,48 @@
 
 .purchase-button:hover {
     background: #2563eb;
+}
+
+.paywall-container {
+    margin: 20px 0;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.paywall-preview {
+    margin-bottom: 15px;
+    color: #666;
+}
+
+.paywall-payment-area {
+    text-align: center;
+    padding: 15px;
+    background-color: #fff;
+    border-radius: 4px;
+}
+
+.paywall-payment-info {
+    margin-bottom: 10px;
+    color: #333;
+    font-weight: bold;
+}
+
+.paywall-purchase-btn {
+    padding: 8px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.paywall-purchase-btn:hover {
+    background-color: #0056b3;
+}
+
+.paywall-content {
+    display: none;
 } 
