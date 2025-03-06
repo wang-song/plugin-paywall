@@ -19,6 +19,8 @@ import java.util.HashMap;
     singular = "paymentrecord")
 public class PaymentRecord extends AbstractExtension {
 
+    //name为clientId和contentId生成的UUID，MyUtils.generateDeterministicUUID
+
     @Schema(description = "付费内容记录的规格")
     private PaymentRecordSpec spec;
 
@@ -29,6 +31,10 @@ public class PaymentRecord extends AbstractExtension {
         @Schema(description = "内容ID", requiredMode = Schema.RequiredMode.REQUIRED)
         private String contentId;
 
+        @Schema(description = "客户端ID")
+        private String clientId;
+
+        //创建索引，按照订单号查询是否支付成功
         @Schema(description = "订单号")
         private String orderId;
 
@@ -43,9 +49,6 @@ public class PaymentRecord extends AbstractExtension {
 
         @Schema(description = "支付时间")
         private Long payTime;
-
-        @Schema(description = "客户端ID")
-        private String clientId;
 
         @Schema(description = "QR码URL")
         private String qrCodeUrl;

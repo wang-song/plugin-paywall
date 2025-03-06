@@ -28,8 +28,9 @@ const testing = ref(false);
 
 onMounted(async () => {
   try {
+    // `/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/${contentId}`, {
     const { data } = await apiClient.get(
-      `/apis/api.plugin.halo.run/v1alpha1/plugins/plugin-vmq/settings/vmq-settings`
+      `/apis/plugin-paywall.halo.run/v1alpha1/setting/getSettings`
     );
     if (data.spec.forms) {
       formState.value = {

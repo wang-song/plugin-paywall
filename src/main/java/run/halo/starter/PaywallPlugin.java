@@ -20,6 +20,7 @@ public class PaywallPlugin extends BasePlugin {
     public void start() {
         schemeManager.register(PaymentRecord.class);
         schemeManager.register(ContentRecord.class);
+        schemeManager.register(MqSetting.class);
     }
 
     @Override
