@@ -64,8 +64,8 @@ public class PaywallPostContentHandler implements ReactivePostContentHandler {
                                 log.info("处理付费内容：price={}, preview={}", price, previewContent);
                                 
                                 // 生成内容ID
-                                String contentId = UUID.randomUUID().toString();
-                                
+                                String contentId = context.getPost().getMetadata().getName();
+
                                 // 创建付费内容容器
                                 Element container = new Element("div")
                                     .attr("class", "paywall-container");
@@ -111,40 +111,37 @@ public class PaywallPostContentHandler implements ReactivePostContentHandler {
                                     .attr("id", "content-" + contentId)
                                     .html(""); // 确保内容区域为空
                                 container.appendChild(contentArea);
-                                
                                 // 替换原始元素
                                 element.replaceWith(container);
-                                
-                                // 创建 PaymentRecord 资源
-                                PaymentRecord paymentRecord = new PaymentRecord();
-                                paymentRecord.setMetadata(new run.halo.app.extension.Metadata());
-                                // 为资源设置名称 用于查询
-                                paymentRecord.getMetadata().setName(contentId);
-
-                                PaymentRecord.PaymentRecordSpec spec = new PaymentRecord.PaymentRecordSpec();
-                                // 为资源设置内容ID
-                                spec.setContentId(contentId);
-                                // 为资源付费内容
-                                spec.setContent(originalContent);
-                                // 为资源设置预览内容
-                                spec.setPreviewContent(previewContent);
-                                // 为资源付费内容设置价格
-                                spec.setPrice(Double.parseDouble(price));
-                                // 为资源设置创建时间
-                                spec.setCreateTime(Instant.now().getEpochSecond());
-                                // spec.setExpireTime(Instant.now().plusSeconds(24 * 60 * 60).getEpochSecond());
 
 
-                                spec.setPayStatus(PayStatus.PENDING.name());
+                                String uuid = MyUtils.generateDeterministicUUID(contentId);
+                                //先查询有没有这个资源
+                                client.fetch(ContentRecord.class, uuid).switchIfEmpty(Mono.error(new RuntimeException("资源不存在")))
+                                    .doOnSuccess(contentRecord -> {
+                                        log.info("资源已存在：contentId={}", uuid);
+                                    })
+                                    .doOnError(error -> {
+                                        // 创建 ContentRecord 资源
+                                        ContentRecord contentRecord = new ContentRecord();
+                                        contentRecord.setMetadata(new run.halo.app.extension.Metadata());
+                                        // 为资源设置名称 用于查询
+                                        contentRecord.getMetadata().setName(uuid);
 
-                                paymentRecord.setSpec(spec);
-
-                                // 异步保存到 Kubernetes
-                                client.create(paymentRecord)
-                                    .doOnSuccess(created -> log.info("成功创建付费内容资源：contentId={}", contentId))
-                                    .doOnError(error -> log.error("创建付费内容资源失败：", error))
+                                        ContentRecord.ContentRecordSpec spec = new ContentRecord.ContentRecordSpec();
+                                        spec.setContentId(uuid);
+                                        spec.setPrice(Double.parseDouble(price));
+                                        spec.setContent(originalContent);
+                                        spec.setPreviewContent(previewContent);
+                                        contentRecord.setSpec(spec);
+                                        client.create(contentRecord)
+                                            .doOnSuccess(created -> log.info("成功创建付费内容资源：contentId={}", uuid))
+                                            .doOnError(error1 -> log.error("创建付费内容资源失败：", error))
+                                            .subscribe();
+                                    })
                                     .subscribe();
-                                
+
+
                             } catch (Exception e) {
                                 log.error("处理付费内容区块失败：", e);
                             }

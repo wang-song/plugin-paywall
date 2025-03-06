@@ -61,10 +61,18 @@ async function handlePurchase(contentId) {
         
         // 创建支付弹窗
         const modal = createPaymentModal(contentId, price);
+        const clientId = generateContentId();
         
-        // 调用购买接口
-        const response = await fetch(`/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/${contentId}`, {
-            method: 'POST'
+        // 调用购买接口  const response = await fetch(`/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/${contentId}`, {
+        const url = `/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/${contentId}?clientId=${encodeURIComponent(clientId)}`;
+        // url.searchParams.append('clientId', getClientId());
+
+        console.log('url:', url);
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
         });
         
         if (!response.ok) {
@@ -234,8 +242,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
 // 生成内容ID
-function generateContentId(prefix) {
-    return prefix + '-' + getClientId();
+function generateContentId() {
+    return  'client-' + getClientId();
 }
 
 // 生成或获取客户端ID
