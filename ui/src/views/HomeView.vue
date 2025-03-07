@@ -8,6 +8,9 @@ import RiTestTubeLine from "~icons/ri/test-tube-line";
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
   withCredentials: true
 });
 
@@ -29,14 +32,15 @@ const testing = ref(false);
 onMounted(async () => {
   try {
     // `/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/${contentId}`, {
+    
     const { data } = await apiClient.get(
       `/apis/plugin-paywall.halo.run/v1alpha1/setting/getSettings`
     );
-    if (data.spec.forms) {
+    if (data.spec) {
       formState.value = {
-        serverUrl: data.spec.forms.serverUrl || "",
-        key: data.spec.forms.key || "",
-        notifyUrl: data.spec.forms.notifyUrl || ""
+        serverUrl: data.spec.serverUrl || "",
+        key: data.spec.key || "",
+        notifyUrl: data.spec.notifyUrl || ""
       };
     }
   } catch (e) {
@@ -47,14 +51,15 @@ onMounted(async () => {
 
 const handleSubmit = async () => {
   loading.value = true;
+  const settingString = JSON.stringify({
+    serverUrl: formState.value.serverUrl,
+    key: formState.value.key,
+    notifyUrl: formState.value.notifyUrl
+  });
+  
   try {
-    await apiClient.put(
-      `/apis/api.plugin.halo.run/v1alpha1/plugins/plugin-vmq/settings/vmq-settings`,
-      {
-        spec: {
-          forms: formState.value
-        }
-      }
+    await apiClient.post(
+      `/apis/plugin-paywall.halo.run/v1alpha1/setting/saveSettings/${settingString}`
     );
     Toast.success("保存成功");
   } catch (e) {

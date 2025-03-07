@@ -21,6 +21,8 @@ dependencies {
 
     testImplementation 'run.halo.app:api'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    implementation 'cn.hutool:hutool-all:5.8.16'
 }
 
 test {

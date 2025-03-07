@@ -25,14 +25,14 @@ public class MqSetting extends AbstractExtension {
     public static class MqSettingSpec {
         
         @Schema(description = "服务器地址", requiredMode = Schema.RequiredMode.REQUIRED)
-        private String ServerUrl;
+        private String serverUrl;
 
 
         @Schema(description = "通讯密钥",requiredMode = Schema.RequiredMode.REQUIRED)
         private String key;
 
         @Schema(description = "回调地址")
-        private String returnUrl;
+        private String notifyUrl;
 
     }
 } 
