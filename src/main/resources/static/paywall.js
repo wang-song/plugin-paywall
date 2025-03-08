@@ -81,11 +81,12 @@ async function handlePurchase(contentId) {
         }
         
         const data = await response.json();
+        console.log('data:', data);
         
         // 显示二维码
         const qrcodeImg = document.getElementById(`qrcode-img-${contentId}`);
         if (qrcodeImg) {
-            qrcodeImg.src = data.qrCodeUrl;
+            qrcodeImg.src = "data:image/png;base64,"+data.qrCodeUrl;
         }
         
         // 开始轮询支付状态

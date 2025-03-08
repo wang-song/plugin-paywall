@@ -59,6 +59,10 @@ public class PaymentRecord extends AbstractExtension {
         @Schema(description = "预览内容")
         private String previewContent;
 
+        //过期时间
+        @Schema(description = "过期时间")
+        private Long expireTime;
+
 
 
 

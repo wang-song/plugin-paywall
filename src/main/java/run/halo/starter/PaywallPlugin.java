@@ -25,9 +25,18 @@ public class PaywallPlugin extends BasePlugin {
         schemeManager.register(ContentRecord.class);
         schemeManager.register(MqSetting.class);
         schemeManager.register(PaymentRecord.class,indexSpecs -> {
-            indexSpecs.add(new IndexSpec().setName("paymentRecordSpec.orderId")
+            indexSpecs.add(new IndexSpec().setName("spec.orderId")
                 .setIndexFunc(
                     simpleAttribute(PaymentRecord.class, record -> record.getSpec().getOrderId())
+                ));
+            indexSpecs.add(new IndexSpec().setName("spec.expireTime")
+                .setIndexFunc(
+                    simpleAttribute(PaymentRecord.class, record -> String.valueOf(
+                        record.getSpec().getExpireTime()))
+                ));
+            indexSpecs.add(new IndexSpec().setName("spec.payStatus")
+                .setIndexFunc(
+                    simpleAttribute(PaymentRecord.class, record -> record.getSpec().getPayStatus())
                 ));
         });
 

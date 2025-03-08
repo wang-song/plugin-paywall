@@ -125,6 +125,20 @@ public class PaywallPostContentHandler implements ReactivePostContentHandler {
                                     .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "ContentRecord资源不存在")))
                                     .doOnSuccess(contentRecord -> {
                                         log.info("资源已存在：contentId={}", contentId);
+                                        // 更新资源
+                                        ContentRecord.ContentRecordSpec spec = new
+                                            ContentRecord.ContentRecordSpec();
+                                        spec.setContentId(contentId);
+                                        spec.setPrice(Double.parseDouble(price));
+                                        spec.setContent(originalContent);
+                                        spec.setPreviewContent(previewContent);
+                                        contentRecord.setSpec(spec);
+                                        client.update(contentRecord)
+                                            .doOnSuccess(updated -> log.info("成功更新付费内容资源：contentId={}", contentId))
+                                            .doOnError(error -> log.error("更新付费内容资源失败：", error))
+                                            .subscribe();
+
+
                                     })
                                     .doOnError(error -> {
                                         // 创建 ContentRecord 资源
