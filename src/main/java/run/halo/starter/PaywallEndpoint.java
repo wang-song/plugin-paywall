@@ -1,17 +1,18 @@
 package run.halo.starter;
 
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
-import run.halo.app.extension.ListOptions;
+import run.halo.app.extension.ExtensionClient;
+import run.halo.app.extension.Metadata;
 import run.halo.app.extension.ReactiveExtensionClient;
-import run.halo.app.extension.index.query.QueryFactory;
 import run.halo.app.plugin.ApiVersion;
 import java.util.Map;
-import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.HashMap;
 import java.util.List;
@@ -100,42 +101,77 @@ public class PaywallEndpoint {
      * 购买内容接口
      * 创建新的支付订单，返回支付二维码URL
      *
-     * @param contentId 要购买的内容ID
+     * @param clientAndContentString 要购买的内容ID
      * @return 包含订单信息的Map，包括：
-     *         - orderId: 订单ID
-     *         - qrCodeUrl: 支付二维码URL
-     *         - price: 支付金额
+     * - orderId: 订单ID
+     * - qrCodeUrl: 支付二维码URL
+     * - price: 支付金额
      */
-    @RequestMapping ("/purchase/{contentId}")
-    public Mono<Map<String, String>> purchase(@PathVariable("contentId") String contentId,
-        @RequestParam("clientId") String clientId) {
+    @RequestMapping ("/purchase/{clientAndContentString}")
+    public Mono<PaymentRecord> purchase(@PathVariable("clientAndContentString") String clientAndContentString) {
 
         String base64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJEAAACGCAYAAADdC2gAAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAATcSURBVHhe7dyxbxtlGMfxx/bVSpQu0FCKGilthgxVBitMHQoDgQWUuSyoqlRlAXWqGFCXRv0DUKcICQHqwsCShYEwoO5VhgqhCqVQFVQGGJCCQurmGJIjl6fn8zm/N+eL7/uRTqrf9y52+377OrEjN+I4jq2PjY0Nm5mZ8cOAmZk1/QAwKCKCjIggIyLIiAgyIoKMiCAjIsiICDIigoyIICMiyIgIMiKCrFH0V0EmJyf9MGDGToQQSt2J1tfX/dDAOp2OH8KQsRNBRkSQBY1odXXVD6EGgkVEQPUVJCICqjc5IgKCHNHi4qIfQs3IERkh1V6QiIyQai1YREZItRU0ItQTEUFW6huwGE3sRJAV2okePfrF4njHDwNmRSN6/PgPO336JT8MmPF0hhCICDIigoyIICMiyIgIMiKCLOjrRPHTh2ZrK7bz5IHZ866fRhlakTWn5swWlqxxZtbPHolgEcVPH9rOFx+ZdbtmDT+LUsVmFkXWvHKnlJDCPZ2trRBQVTRsdy3WVvzMkQgW0c6TBwRUJY29NSlBsIj4HqiCSlqTcBGhtogIMiKCjIggq05EZy9a1Hn74DE3b42z89Z62Z+MKgn2YuPz22/5oYGcuPqttc+fPDi4dd+2fzxl7dk/bfuz6/bsr4PTeSaW79nmzUt+uJB+12bN+7Hkth9P5rzkXM9fO6jWJ9/7oeCqsxPlOTlv7Wuf2omCO1KyGBPL93KPrGtCy4pj8+al/+PI+nN67DgYYkQXrX31ro1/eNfG3//AT+779Qfrrn9n3Z9/t8aUn3xR8j+/yOGl4/Kh+RDSkvtU5d1HlQ0xojesdX7amq9OW/OV1/zkrrF5a7972aILb1p04R1rTfsTDkovpt910kcv6bh6hXYYob5OVQ0xooLa7f0j8pMH+cXyQfj5hLKT5EXp402fq9xn1VQ/ItHm3vckeYttbsGzbmfxIfhr0vFmRezPP65GOiK/QL0WK2uh/e0sfq7INZZ6HFnn+rD836GKRjairBiyFi3Ra/GOYgF7PQb/OPMeb5WMbERZMfSLIr1o6gJuZvxoP6pGMqKJ1I/5lhHHYRz2uqJ86P2Cr5LqRNT38yK2zf72Yy9KAkokO4If7yfEAvrdKO9rJqH74zioRkSnXrfmT7ds65tb9m+v4+sbtlXgFXz/D5/elfIW0UvOT3+9Qa4vIm+36TVeRUN87+xjG19+L7/irfu2ffu6PfPjOfw/flZUaX7eMnaztKy5rLG05D59kMntXtdnXTeoMt47G2JEl23sxjVrjfnxffFvX9o/n3/lhzGAEY8IZSgjotxnE6AIIoKMiCAjIsiICDIigoyIIAsXUavPrx2ifCWtSbCImlNzu5+Lg2qI99akBMEisoUlsygipCrY+5ArW1jyM0ciWESNM7PWvHLHmuc6pW2jyNCKrHmuU9qnpFnI985QX8F2ItQXEUFGRJAREWREBBkRQUZEkBV+nQjopVBEQB6eziAjIsiICDIigoyIICMiyIgIMiKCjIggIyLIiAgyIoKMiCAjIsiICDIigoyIICMiyIgIMiKCjIggIyLIiAgyIoKMiCAjIsiICDIigoyIICMiyIgIMiKCjIggIyLIiAgyIoKMiCAjIsiICDIigoyIICMiyIgIMiKCjIggIyLIiAgy/wDLvjTpXl+rHAAAAABJRU5ErkJggg==";
         // 检查内容是否存在
+        JSONObject jsonObject = JSONUtil.parseObj(clientAndContentString);
+        String contentId = jsonObject.getStr("contentId", "");
+        String clientId = jsonObject.getStr("clientId", "");
 
-        System.out.println("-----------");
-        System.out.println("contentId:"+contentId);
-        System.out.println("clientId:"+clientId);
-        String name = MyUtils.generateDeterministicUUID(contentId);
-        System.out.println("name:"+name);
+        //利用contentId和clientId生成订单名，唯一标识一个订单，一定是这个用户、这个内容的订单
+        String name = MyUtils.generateDeterministicUUID(contentId + ":" + clientId);
 
 
-        return client.fetch(ContentRecord.class, name)
-            .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "内容不存在")))
-            .flatMap(content -> {
-                Map<String, String> response = new HashMap<>();
-
-                //todo: 生成订单
+        System.out.println("开始创建订单contentId: " + contentId);
 
 
 
+        return client.fetch(PaymentRecord.class, name)
+            .switchIfEmpty(Mono.defer(() -> {
+                System.out.println("没有找到订单，开始创建订单");
+                PaymentRecord paymentRecord = new PaymentRecord();
+                paymentRecord.setMetadata(new Metadata());
+                paymentRecord.getMetadata().setName(name);
+                PaymentRecord.PaymentRecordSpec spec = new PaymentRecord.PaymentRecordSpec();
+                spec.setContentId(contentId);
+                spec.setClientId(clientId);
+                spec.setOrderId(name);
+                spec.setPayStatus(PayStatus.PENDING.name());
+                spec.setCreateTime(System.currentTimeMillis());
 
+                // 查询contentRecord，获取价格和内容
+                return client.get(ContentRecord.class, contentId)
+                    .onErrorResume(e -> {
+                        System.err.println("查询 ContentRecord 失败: " + e.getMessage());
+                        return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "查询内容失败"));
+                    })
+                    .flatMap(contentRecord -> {
+                        spec.setPrice(contentRecord.getSpec().getPrice());
+                        spec.setContent(contentRecord.getSpec().getContent());
+                        spec.setPreviewContent(contentRecord.getSpec().getPreviewContent());
+                        paymentRecord.setSpec(spec);
+                        System.out.println("开始创建订单，生成二维码");
 
-                response.put("orderId", contentId);
-                response.put("qrCodeUrl", base64);
-                return Mono.just(response);
+                        // MyUtils.createOrder(name, contentRecord.getSpec().getPrice(), client);
+                        // 将MyUtils.createOrder的结果作为Mono处理并集成到反应式链中 订单创建成功后再创建 PaymentRecord 资源
+                        return MyUtils.createOrder(name, contentRecord.getSpec().getPrice(), client)
+                            .flatMap(result -> {
+                                System.out.println("订单创建结果: " + result);
+                                if(JSONUtil.parseObj(result).getInt("code",0) == 1){
+                                    return client.create(paymentRecord);
+                                }else{
+                                    return Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "创建订单失败"));
+                                }
 
+                            });
+                    })
+                    .doOnSuccess(created -> System.out.println("订单创建成功"))
+                    .doOnError(e -> System.err.println("创建订单失败: " + e.getMessage()))
+                    .onErrorResume(e -> Mono.error(new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "创建订单失败")));
+            }))
+            .flatMap(paymentRecord -> {
+                System.out.println("查询到了，说明已经生成订单了，说明这个订单已经存在了，直接返回");
+                return Mono.just(paymentRecord);
             });
+
     }
 
     /**

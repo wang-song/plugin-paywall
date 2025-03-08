@@ -34,5 +34,8 @@ public class MqSetting extends AbstractExtension {
         @Schema(description = "回调地址")
         private String notifyUrl;
 
+        @Schema(description = "是否是https")
+        private boolean isHttps;
+
     }
 } 

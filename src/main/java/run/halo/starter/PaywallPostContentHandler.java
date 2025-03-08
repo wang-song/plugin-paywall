@@ -6,15 +6,12 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
-import run.halo.app.extension.ExtensionClient;
 import run.halo.app.extension.ReactiveExtensionClient;
 import run.halo.app.theme.ReactivePostContentHandler;
-
-import java.time.Instant;
-import java.util.Optional;
-import java.util.UUID;
 
 @Slf4j
 @Component
@@ -23,9 +20,9 @@ public class PaywallPostContentHandler implements ReactivePostContentHandler {
 
     private final ReactiveExtensionClient client;
 
-
     @Override
-    public Mono<PostContentContext> handle(PostContentContext postContentContext) {
+    public Mono<ReactivePostContentHandler.PostContentContext> handle(
+        ReactivePostContentHandler.PostContentContext postContentContext) {
         return Mono.just(postContentContext)
             .flatMap(context -> {
                 try {
@@ -59,6 +56,8 @@ public class PaywallPostContentHandler implements ReactivePostContentHandler {
                     // 创建一个 Mono 序列来处理所有付费内容
                     return Mono.fromSupplier(() -> {
                         for (Element element : paywallElements) {
+                            System.out.println("--------");
+                            System.out.println(element);
                             try {
                                 String price = element.attr("data-price");
                                 String previewContent = element.attr("data-preview");
@@ -119,41 +118,13 @@ public class PaywallPostContentHandler implements ReactivePostContentHandler {
                                 element.replaceWith(container);
                                 context.setContent(doc.html());
 
-                                String uuid = MyUtils.generateDeterministicUUID(contentId);
+                                // String uuid = MyUtils.generateDeterministicUUID(contentId);
                                 //先查询有没有这个资源
+                                client.fetch(ContentRecord.class, contentId)
 
-                                // return client.fetch(ContentRecord.class, uuid)
-                                //     .hasElement()
-                                //     .flatMap(hasElement -> {
-                                //         if (hasElement) {
-                                //             log.info("资源已存在：contentId={}", uuid);
-                                //             return Mono.empty();
-                                //         } else {
-                                //             // 创建 ContentRecord 资源
-                                //             ContentRecord contentRecord = new ContentRecord();
-                                //             contentRecord.setMetadata(
-                                //                 new run.halo.app.extension.Metadata());
-                                //             // 为资源设置名称 用于查询
-                                //             contentRecord.getMetadata().setName(uuid);
-                                //
-                                //             ContentRecord.ContentRecordSpec spec =
-                                //                 new ContentRecord.ContentRecordSpec();
-                                //             spec.setContentId(uuid);
-                                //             spec.setPrice(Double.parseDouble(price));
-                                //             spec.setContent(originalContent);
-                                //             spec.setPreviewContent(previewContent);
-                                //             contentRecord.setSpec(spec);
-                                //             return client.create(contentRecord);
-                                //         }
-                                //     });
-
-
-                                client.fetch(ContentRecord.class, uuid)
-
-                                    .switchIfEmpty(Mono.error(new RuntimeException
-                                    ("ContentRecord资源不存在")))
+                                    .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "ContentRecord资源不存在")))
                                     .doOnSuccess(contentRecord -> {
-                                        log.info("资源已存在：contentId={}", uuid);
+                                        log.info("资源已存在：contentId={}", contentId);
                                     })
                                     .doOnError(error -> {
                                         // 创建 ContentRecord 资源
@@ -161,18 +132,18 @@ public class PaywallPostContentHandler implements ReactivePostContentHandler {
                                         contentRecord.setMetadata(new run.halo.app.extension
                                         .Metadata());
                                         // 为资源设置名称 用于查询
-                                        contentRecord.getMetadata().setName(uuid);
+                                        contentRecord.getMetadata().setName(contentId);
 
                                         ContentRecord.ContentRecordSpec spec = new
                                         ContentRecord.ContentRecordSpec();
-                                        spec.setContentId(uuid);
+                                        spec.setContentId(contentId);
                                         spec.setPrice(Double.parseDouble(price));
                                         spec.setContent(originalContent);
                                         spec.setPreviewContent(previewContent);
                                         contentRecord.setSpec(spec);
                                         client.create(contentRecord)
                                             .doOnSuccess(created -> log.info
-                                            ("成功创建付费内容资源：contentId={}", uuid))
+                                            ("成功创建付费内容资源：contentId={}", contentId))
                                             .doOnError(error1 -> log.error("创建付费内容资源失败：", error))
                                             .subscribe();
                                     })

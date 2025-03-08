@@ -18,12 +18,14 @@ interface VmqConfig {
   serverUrl: string;
   key: string;
   notifyUrl: string;
+  isHttps: boolean;  // 添加 isHttps 字段
 }
 
 const formState = ref<VmqConfig>({
   serverUrl: "",
   key: "",
   notifyUrl: "",
+  isHttps: false,  // 添加默认值
 });
 
 const loading = ref(false);
@@ -40,7 +42,8 @@ onMounted(async () => {
       formState.value = {
         serverUrl: data.spec.serverUrl || "",
         key: data.spec.key || "",
-        notifyUrl: data.spec.notifyUrl || ""
+        notifyUrl: data.spec.notifyUrl || "",
+        isHttps: data.spec.https || false
       };
     }
   } catch (e) {
@@ -54,12 +57,13 @@ const handleSubmit = async () => {
   const settingString = JSON.stringify({
     serverUrl: formState.value.serverUrl,
     key: formState.value.key,
-    notifyUrl: formState.value.notifyUrl
+    notifyUrl: formState.value.notifyUrl,
+    isHttps: formState.value.isHttps
   });
   
   try {
     await apiClient.post(
-      `/apis/plugin-paywall.halo.run/v1alpha1/setting/saveSettings/${settingString}`
+      `/apis/plugin-paywall.halo.run/v1alpha1/setting/saveSettings/${encodeURIComponent(settingString)}`
     );
     Toast.success("保存成功");
   } catch (e) {
@@ -118,6 +122,19 @@ const testConnection = async () => {
           <div class="form-help">V免签服务端的访问地址，需要确保Halo服务器可以访问</div>
         </div>
 
+        <!-- 添加 HTTPS 复选框 -->
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input
+              type="checkbox"
+              v-model="formState.isHttps"
+              class="checkbox-input"
+            />
+            <span class="checkbox-text">使用 HTTPS 协议</span>
+          </label>
+          <div class="form-help">如果您的服务器支持 HTTPS，请勾选此项</div>
+        </div>
+
         <div class="form-group">
           <label for="key">通信密钥</label>
           <input
@@ -165,6 +182,34 @@ const testConnection = async () => {
 </template>
 
 <style lang="scss" scoped>
+.checkbox-group {
+  margin-top: -0.5rem;  // 调整与上方输入框的间距
+  
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+  }
+
+  .checkbox-input {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid #d1d5db;
+    cursor: pointer;
+
+    &:checked {
+      background-color: #3b82f6;
+      border-color: #3b82f6;
+    }
+  }
+
+  .checkbox-text {
+    font-size: 0.875rem;
+    color: #374151;
+  }
+}
 .vmq-settings {
   padding: 2rem;
   background-color: #f8fafc;

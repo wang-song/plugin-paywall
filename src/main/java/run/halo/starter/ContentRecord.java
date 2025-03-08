@@ -17,7 +17,7 @@ import run.halo.app.extension.GVK;
     singular = "contentrecord")
 public class ContentRecord extends AbstractExtension {
 
-    //name为利用contentId生成的UUID，MyUtils.generateDeterministicUUID
+    //name就是文章自定义模型的name contentId
 
     private ContentRecordSpec spec;
 

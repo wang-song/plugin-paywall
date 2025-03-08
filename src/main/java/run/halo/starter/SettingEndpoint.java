@@ -60,6 +60,8 @@ public class SettingEndpoint {
         String serverUrl = jsonObject.getStr("serverUrl", "");
         String key = jsonObject.getStr("key", "");
         String notifyUrl = jsonObject.getStr("notifyUrl", "");
+        boolean isHttps = jsonObject.getBool("isHttps", false);
+        System.out.println("settingString:" + settingString);
         // 首先获取内容信息
         return client.fetch(MqSetting.class, "mqsetting")
             .hasElement()
@@ -72,6 +74,7 @@ public class SettingEndpoint {
                             mqSettingSpec.setServerUrl(serverUrl);
                             mqSettingSpec.setKey(key);
                             mqSettingSpec.setNotifyUrl(notifyUrl);
+                            mqSettingSpec.setHttps(isHttps);
                             setting1.setSpec(mqSettingSpec);
                             return client.update(setting1).doOnError(error -> {
                                 System.out.println("更新setting失败");
@@ -87,6 +90,7 @@ public class SettingEndpoint {
                     mqSettingSpec.setServerUrl(serverUrl);
                     mqSettingSpec.setKey(key);
                     mqSettingSpec.setNotifyUrl(notifyUrl);
+                    mqSettingSpec.setHttps(isHttps);
                     setting.setSpec(mqSettingSpec);
                     return client.create(setting).doOnError(error1 -> {
                         System.out.println("创建setting失败");
