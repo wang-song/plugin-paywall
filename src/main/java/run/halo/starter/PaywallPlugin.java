@@ -38,6 +38,16 @@ public class PaywallPlugin extends BasePlugin {
                 .setIndexFunc(
                     simpleAttribute(PaymentRecord.class, record -> record.getSpec().getPayStatus())
                 ));
+
+            indexSpecs.add(new IndexSpec().setName("spec.contentId")
+                .setIndexFunc(
+                    simpleAttribute(PaymentRecord.class, record -> record.getSpec().getContentId())
+                ));
+
+            indexSpecs.add(new IndexSpec().setName("spec.orderId")
+                .setIndexFunc(
+                    simpleAttribute(PaymentRecord.class, record -> record.getSpec().getClientId())
+                ));
         });
 
 
