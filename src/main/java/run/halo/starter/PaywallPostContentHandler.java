@@ -101,7 +101,7 @@ public class PaywallPostContentHandler implements ReactivePostContentHandler {
                                     .attr("data-content-id", contentId)
                                     .attr("data-price", price)
                                     .attr("onclick", "handlePurchase('" + contentId + "')")
-                                    .html("购买完整内容");
+                                    .html("购买/已经购买可点击查看");
 
                                 paymentArea.appendChild(paymentInfo);
                                 paymentArea.appendChild(purchaseButton);

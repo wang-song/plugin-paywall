@@ -49,7 +49,7 @@ public class MyUtils {
                     data.put("sign", getMD5Hash(payId + 1 + price + key));
                     System.out.println("data:"+data);
                     String result = HttpUtil.post(getCreateOrderUrl(serverUrl,isHttps), data);
-                    System.out.println("result:"+result);
+                    System.out.println("创建订单result:"+result);
 
                     return Mono.just(result);
                 } catch (Exception e) {
@@ -71,6 +71,40 @@ public class MyUtils {
         }
         return serverUrl;
     }
+
+    private static String getCheckOrderUrl(String serverUrl,boolean isHttps) {
+        if(isHttps){
+            serverUrl = "https://"+serverUrl + "/checkOrder";
+        }else{
+            serverUrl = "http://"+serverUrl + "/checkOrder";
+        }
+        return serverUrl;
+    }
+
+    public static Mono<String> checkOrder(String orderId,ReactiveExtensionClient client){
+
+        return client.fetch(MqSetting.class,"mqsetting")
+            .flatMap(setting -> {
+
+                String serverUrl = setting.getSpec().getServerUrl();
+                boolean isHttps = setting.getSpec().isHttps();
+
+                Map<String, Object> data = new HashMap<>();
+                data.put("orderId", orderId);
+
+                String result = HttpUtil.post(getCheckOrderUrl(serverUrl,isHttps), data);
+                System.out.println("查询订单状态result:"+result);
+
+                return Mono.just(result);
+
+            })
+            .onErrorResume(e -> {
+                return Mono.just("查询订单失败");
+            });
+
+    }
+
+
 
     public static String getMD5Hash(String input) {
         try {

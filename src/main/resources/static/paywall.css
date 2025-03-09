@@ -154,6 +154,7 @@
     height: auto;
     border: 1px solid #e5e7eb;
     border-radius: 4px;
+    text-align: center;
 }
 
 .payment-status {
