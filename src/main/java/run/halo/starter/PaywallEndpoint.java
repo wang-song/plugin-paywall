@@ -121,8 +121,8 @@ public class PaywallEndpoint {
         String clientId = jsonObject.getStr("clientId", "");
 
         //利用contentId和clientId生成订单名，唯一标识一个订单，一定是这个用户、这个内容的订单
+        long createTime = System.currentTimeMillis();
         String name = MyUtils.generateDeterministicUUID(contentId + ":" + clientId);
-
 
         System.out.println("开始创建订单contentId: " + contentId);
 
@@ -137,8 +137,8 @@ public class PaywallEndpoint {
                 spec.setContentId(contentId);
                 spec.setClientId(clientId);
                 spec.setPayStatus(PayStatus.PENDING.name());
-                spec.setCreateTime(System.currentTimeMillis());
-                spec.setExpireTime(System.currentTimeMillis() + 1000 * 60 * 5);
+                spec.setCreateTime(createTime);
+                spec.setExpireTime(createTime + 1000 * 60 * 5);
 
                 // 查询contentRecord，获取价格和内容
                 return client.get(ContentRecord.class, contentId)
@@ -155,7 +155,8 @@ public class PaywallEndpoint {
 
                         // MyUtils.createOrder(name, contentRecord.getSpec().getPrice(), client);
                         // 将MyUtils.createOrder的结果作为Mono处理并集成到反应式链中 订单创建成功后再创建 PaymentRecord 资源
-                        return MyUtils.createOrder(name, contentRecord.getSpec().getPrice(), client)
+                        //这里的第一个参数是商户的订单号，不能重复，所以加上当前的时间就好了
+                        return MyUtils.createOrder(name + createTime, contentRecord.getSpec().getPrice(), client)
                             .flatMap(result -> {
                                 System.out.println("订单创建结果: " + result);
                                 if(JSONUtil.parseObj(result).getInt("code",0) == 1){

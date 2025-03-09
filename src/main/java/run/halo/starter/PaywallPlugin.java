@@ -44,7 +44,7 @@ public class PaywallPlugin extends BasePlugin {
                     simpleAttribute(PaymentRecord.class, record -> record.getSpec().getContentId())
                 ));
 
-            indexSpecs.add(new IndexSpec().setName("spec.orderId")
+            indexSpecs.add(new IndexSpec().setName("spec.clientId")
                 .setIndexFunc(
                     simpleAttribute(PaymentRecord.class, record -> record.getSpec().getClientId())
                 ));

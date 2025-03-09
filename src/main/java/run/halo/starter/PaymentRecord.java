@@ -64,20 +64,6 @@ public class PaymentRecord extends AbstractExtension {
         private Long expireTime;
 
 
-
-
-
     }
 
-    // public void updateLabels() {
-    //     if (this.spec != null) {
-    //         Map<String, String> labels = getMetadata().getLabels();
-    //         if (labels == null) {
-    //             labels = new HashMap<>();
-    //             getMetadata().setLabels(labels);
-    //         }
-    //         labels.put("content-id", this.spec.getContentId());
-    //         labels.put("username", this.spec.getUsername());
-    //     }
-    // }
 } 
