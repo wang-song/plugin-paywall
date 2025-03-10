@@ -13,6 +13,8 @@ function createPaymentModal(contentId, price) {
                 <img src="" alt="支付二维码" id="qrcode-img-${contentId}">
             </div>
             <div class="payment-status" id="payment-status-${contentId}">正在等待支付...</div>
+            <div class="payment-countdown" id="countdown-${contentId}">支付倒计时：<span>05:00</span></div>
+            <div class="payment-tips">请再四分钟内支付完成，最后一分钟尽量不要支付。支付成功后会有5至10秒的延迟，请不要关闭窗口！</div>
         </div>
     `;
     
@@ -22,9 +24,22 @@ function createPaymentModal(contentId, price) {
 
 // 关闭支付弹窗
 function closePaymentModal(contentId) {
-    const modal = document.getElementById(`payment-modal-${contentId}`);
-    if (modal) {
-        modal.remove();
+
+    const modalEl = document.getElementById(`payment-modal-${contentId}`);
+    if (modalEl) {
+        // 清除倒计时
+        const timerId = modalEl.dataset.timerId;
+        if (timerId) {
+            console.log('清除定时器:', timerId); // 调试日志
+            clearInterval(Number(timerId));
+        }
+                
+        // 清除轮询定时器
+        const pollIntervalId = modalEl.dataset.pollIntervalId;
+        if (pollIntervalId) {
+            clearInterval(Number(pollIntervalId));
+        }
+        modalEl.style.display = 'none';
     }
 }
 
@@ -72,53 +87,81 @@ async function handlePurchase(contentId) {
             qrcodeImg.src = "data:image/png;base64,"+data.qrCodeUrl;
         }
         
-        // 开始轮询支付状态
-        const checkPaymentStatus = async () => {
-            try {
-                const statusResponse = await fetch(`/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/status/${data.orderId}`);
-                if (!statusResponse.ok) {
-                    throw new Error('检查支付状态失败');
-                }
-                
-                const statusData = await statusResponse.json();
-                
-                if (statusData.payStatus === 'SUCCESS') {
-                    // 支付成功
-                    updatePaymentStatus(contentId, '支付成功！正在加载内容...');
-                    setTimeout(() => {
-                        closePaymentModal(contentId);
-                        // 获取内容
-                        fetchContent(contentId, data.orderId);
-                    }, 1500);
-                    return;
-                } else if (statusData.payStatus === 'FAILED') {
-                    updatePaymentStatus(contentId, '支付失败，请重试');
-                    setTimeout(() => {
-                        closePaymentModal(contentId);
-                    }, 2000);
-                    return;
-                }
-                
-                // 继续轮询
-                updatePaymentStatus(contentId, '正在等待支付...');
-                setTimeout(checkPaymentStatus, 2000);
-            } catch (error) {
-                console.error('检查支付状态失败:', error);
-                updatePaymentStatus(contentId, '检查支付状态失败，请刷新页面重试');
-            }
-        };
-        
         // 开始检查支付状态
-        checkPaymentStatus();
+        await checkPaymentStatus(contentId, data.orderId);
+
+        // 启动倒计时
+        if (data.expireTime) {
+            startCountdown(contentId, data.expireTime);
+        }
+
+
 
     } catch (error) {
         console.error('处理支付失败:', error);
         updatePaymentStatus(contentId, '创建支付订单失败，请重试');
-        setTimeout(() => {
-            closePaymentModal(contentId);
-        }, 2000);
+
     }
 }
+
+
+// 开始轮询支付状态
+function checkPaymentStatus(contentId,orderId) {
+
+    const pollInterval = setInterval(async () => {
+
+        try {
+            const statusResponse = await fetch(`/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/status/${orderId}`);
+            if (!statusResponse.ok) {
+                throw new Error('检查支付状态失败');
+            }
+
+            const statusData = await statusResponse.json();
+
+            const statusEl = document.getElementById(`payment-status-${contentId}`);
+            // 更新状态显示
+            if (statusEl) {
+                statusEl.textContent = statusData.message || '正在等待支付...';
+            }
+
+            // 处理不同的支付状态
+            switch (statusData.payStatus) {
+                case 'SUCCESS':
+                    clearInterval(pollInterval);
+                    fetchContent(contentId, orderId);
+                    closePaymentModal(contentId);
+                    break;
+                case 'EXPIRED':
+                    clearInterval(pollInterval);
+                    statusEl.textContent = '支付已超时';
+                    closePaymentModal(contentId);
+                    break;
+                case 'PENDING':
+                    //继续等待，更新倒计时
+                    if (statusData.expireTime) {
+                        updateCountdown(contentId, statusData.expireTime);
+                    }
+                    break;
+            }
+        } catch (error) {
+            console.error('检查支付状态失败:', error);
+        }
+    }, 3000);
+
+    // 保存轮询定时器ID
+    const modalEl = document.getElementById(`payment-modal-${contentId}`);
+    if (modalEl) {
+        modalEl.dataset.pollIntervalId = pollInterval.toString();
+        console.log('保存轮询定时器ID:', pollInterval); // 调试日志
+    }
+
+    // 启动倒计时
+    // if (statusData.expireTime) {
+    //     startCountdown(contentId, statusData.expireTime);
+    // }
+
+};
+
 
 // 获取付费内容
 function fetchContent(contentId,orderId) {
@@ -167,98 +210,66 @@ function getClientId() {
     return clientId;
 }
 
-// // 页面加载完成后检查已购买的内容
-// document.addEventListener('DOMContentLoaded', async () => {
-//     try {
-//         const response = await fetch('/apis/api.plugin.halo.run/v1alpha1/plugins/plugin-paywall/purchased-contents');
-//         if (!response.ok) {
-//             throw new Error('获取已购买内容失败');
-//         }
-//
-//         const purchasedContents = await response.json();
-//
-//         // 显示已购买的内容
-//         purchasedContents.forEach(contentId => {
-//             showPaywallContent(contentId);
-//         });
-//     } catch (error) {
-//         console.error('获取已购买内容失败:', error);
-//     }
-// });
 
-// // 处理付费内容的显示
-// (function() {
-//     // 查找所有付费内容区块
-//     function initPaywall() {
-//         const paywallElements = document.querySelectorAll('[data-paywall]');
-//         paywallElements.forEach(element => {
-//             const price = element.getAttribute('data-price');
-//             const preview = element.getAttribute('data-preview');
-//             const contentId = element.getAttribute('data-content-id');
-//
-//             // 创建付费内容包装器
-//             const wrapper = document.createElement('div');
-//             wrapper.className = 'paywall-wrapper';
-//             wrapper.innerHTML = `
-//                 <div class="paywall-header">
-//                     <div class="paywall-price">
-//                         <span class="price-label">付费内容</span>
-//                         <span class="price-amount">¥${price}</span>
-//                     </div>
-//                     ${preview ? `<div class="paywall-preview">${preview}</div>` : ''}
-//                 </div>
-//                 <div class="paywall-actions">
-//                     <button class="purchase-button" onclick="handlePurchase('${contentId}')">
-//                         立即购买
-//                     </button>
-//                 </div>
-//             `;
-//
-//             // 保存原始内容
-//             const content = element.innerHTML;
-//             element.innerHTML = '';
-//             element.appendChild(wrapper);
-//
-//             // 检查是否已购买
-//             checkPurchaseStatus(contentId).then(purchased => {
-//                 if (purchased) {
-//                     wrapper.innerHTML = content;
-//                 }
-//             });
-//         });
-//     }
-//
-//     // 检查购买状态
-//     async function checkPurchaseStatus(contentId) {
-//         try {
-//             const response = await fetch(`/apis/api.plugin.halo.run/v1alpha1/plugins/paywall/status/${contentId}`);
-//             if (response.ok) {
-//                 const data = await response.json();
-//                 return data.purchased;
-//             }
-//         } catch (error) {
-//             console.error('Failed to check purchase status:', error);
-//         }
-//         return false;
-//     }
-//
-//     // 页面加载完成后初始化
-//     document.addEventListener('DOMContentLoaded', initPaywall);
-// })();
-// // 显示付费内容
-// function showPaywallContent(contentId) {
-//     const container = document.querySelector(`#content-${contentId}`);
-//     if (container) {
-//         container.innerHTML = data.content;
-//         container.style.display = 'block';
-//
-//         // 隐藏支付区域
-//         const paymentArea = container.parentElement.querySelector('.paywall-payment-area');
-//         if (paymentArea) paymentArea.style.display = 'none';
-//
-//         // 隐藏预览区域
-//         const previewArea = container.parentElement.querySelector('.paywall-preview');
-//         if (previewArea) previewArea.style.display = 'none';
-//     }
-// }
+// 倒计时函数
+function startCountdown(contentId, expireTime) {
+    console.log('开始倒计时:', contentId, expireTime); // 调试日志
+
+    const countdownEl = document.querySelector(`#countdown-${contentId}`);
+    if (!countdownEl) {
+        console.error('找不到倒计时元素');
+        return;
+    }
+
+    const modalEl = document.getElementById(`payment-modal-${contentId}`);
+    if (modalEl && modalEl.dataset.timerId) {
+        clearInterval(Number(modalEl.dataset.timerId));
+    }
+
+        // 立即执行一次
+        updateCountdown(contentId, expireTime);
+    
+        // 设置定时器，每秒更新一次
+    const timer = setInterval(() => updateCountdown(contentId, expireTime), 1000);
+    
+        // 保存timer id
+        if (modalEl) {
+            modalEl.dataset.timerId = timer.toString();
+            console.log('保存定时器ID:', timer); // 调试日志
+        }
+
+}
+
+function updateCountdown(contentId, expireTime) {
+    const countdownEl = document.querySelector(`#countdown-${contentId}`);
+    if (!countdownEl) {
+        console.error('找不到倒计时元素');
+        return;
+    }
+
+    const now = Date.now();
+    const timeLeft = Math.max(0, parseInt(expireTime) - now);
+    
+    console.log('剩余时间(毫秒):', timeLeft); // 调试日志
+
+    if (timeLeft <= 0) {
+        countdownEl.textContent = "支付已超时";
+        countdownEl.classList.add('expired');
+        closePaymentModal(contentId);
+        alert('支付超时，请重新发起支付');
+        return;
+    }
+
+    // 计算分钟和秒数
+    const minutes = Math.floor(timeLeft / (1000 * 60));
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+    
+    // 更新倒计时显示
+    const timeString = `支付倒计时：${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    console.log('更新倒计时显示:', timeString); // 调试日志
+    countdownEl.textContent = timeString;
+
+    
+}
+
 

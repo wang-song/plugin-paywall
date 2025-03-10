@@ -10,7 +10,7 @@ spec:
   version: 1.0.0
   requires: ">=2.20.0"
   author:
-    name: YourName
+    name: wangsong
     website: https://github.com/yourusername
   logo: https://your-logo-url.png
   homepage: https://github.com/yourusername/plugin-paywall

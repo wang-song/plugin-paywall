@@ -126,6 +126,7 @@ public class PaywallEndpoint {
             }))
             .flatMap(paymentRecord -> {
                 System.out.println("查询到了，说明已经生成订单了，说明这个订单已经存在了，直接返回");
+                System.out.println(paymentRecord);
                 PaymentRecordDto dto = new PaymentRecordDto();
                 dto.setContentId(paymentRecord.getSpec().getContentId());
                 dto.setClientId(paymentRecord.getSpec().getClientId());
@@ -156,6 +157,7 @@ public class PaywallEndpoint {
         Query query = equal("spec.orderId", orderId);
 
         ListOptions options = ListOptions.builder().fieldQuery(query).build();
+        System.out.println("开始查询支付状态orderId: " + orderId);
 
         return client.listAll(PaymentRecord.class, options, Sort.by(Sort.Order.asc("spec.orderId")))
             .next()
@@ -180,6 +182,8 @@ public class PaywallEndpoint {
                                 return Mono.just(response);
                             }else {
                                 response.put("payStatus", PayStatus.PENDING.name());
+                                response.put("createTime", paymentRecord.getSpec().getCreateTime().toString());
+                                response.put("expireTime", paymentRecord.getSpec().getExpireTime().toString());
                                 return Mono.just(response);
                             }
 

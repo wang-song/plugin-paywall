@@ -146,21 +146,37 @@
 }
 
 .payment-qrcode {
-    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 20px auto;
+    width: 100%;
 }
 
 .payment-qrcode img {
-    max-width: 200px;
+    max-width: 200px;  /* 设置二维码图片的最大宽度 */
     height: auto;
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    text-align: center;
+    border: 1px solid #e5e7eb;  /* 添加边框 */
+    border-radius: 8px;         /* 圆角 */
+    padding: 10px;              /* 内边距 */
+    background: white;          /* 白色背景 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);  /* 添加阴影效果 */
 }
 
+
 .payment-status {
-    color: #6b7280;
-    font-size: 0.875rem;
-    margin-bottom: 1rem;
+    text-align: center;
+    color: #374151;
+    margin: 10px 0;
+    font-weight: 500;
+}
+
+.payment-tips {
+    text-align: center;
+    color: #6b7280;  /* 浅灰色 */
+    font-size: 0.875rem;  /* 14px */
+    margin-top: 8px;
+    margin-bottom: 16px;
 }
 
 .payment-close {
@@ -282,3 +298,21 @@
 .paywall-content {
     display: none;
 } 
+
+.payment-countdown {
+    text-align: center;
+    color: #ef4444;  /* 红色 */
+    font-size: 0.875rem;
+    margin: 8px 0;
+    font-weight: 500;
+    padding: 4px 8px;
+    background-color: #fef2f2;  /* 浅红色背景 */
+    border-radius: 4px;
+    display: inline-block;
+}
+
+/* 超时状态样式 */
+.payment-countdown.expired {
+    color: #9ca3af;  /* 灰色 */
+    background-color: #f3f4f6;
+}
