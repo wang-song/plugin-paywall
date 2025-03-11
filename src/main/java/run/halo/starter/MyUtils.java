@@ -63,7 +63,7 @@ public class MyUtils {
 
     }
 
-    private static String getCreateOrderUrl(String serverUrl,boolean isHttps) {
+    public static String getCreateOrderUrl(String serverUrl,boolean isHttps) {
         if(isHttps){
             serverUrl = "https://"+serverUrl + "/createOrder";
         }else{
@@ -72,7 +72,7 @@ public class MyUtils {
         return serverUrl;
     }
 
-    private static String getCheckOrderUrl(String serverUrl,boolean isHttps) {
+    public static String getCheckOrderUrl(String serverUrl,boolean isHttps) {
         if(isHttps){
             serverUrl = "https://"+serverUrl + "/checkOrder";
         }else{
@@ -80,6 +80,20 @@ public class MyUtils {
         }
         return serverUrl;
     }
+
+
+    public static String getCloseOrderUrl(String serverUrl,boolean isHttps) {
+        if(isHttps){
+            serverUrl = "https://"+serverUrl + "/closeOrder";
+        }else{
+            serverUrl = "http://"+serverUrl + "/closeOrder";
+        }
+        return serverUrl;
+    }
+
+
+
+
 
     public static Mono<String> checkOrder(String orderId,ReactiveExtensionClient client){
 

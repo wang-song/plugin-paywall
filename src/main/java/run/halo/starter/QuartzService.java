@@ -39,7 +39,7 @@ public class QuartzService {
         // 延迟30秒执行定时任务
         executorService.schedule(() -> {
 
-            CronUtil.schedule("*/3 * * * * *", new Task() {
+            CronUtil.schedule("*/5 * * * * *", new Task() {
                 @Override
                 public void execute() {
                     try {

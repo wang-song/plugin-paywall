@@ -1,5 +1,6 @@
 package run.halo.starter;
 
+import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONObjectIter;
 import cn.hutool.json.JSONUtil;
@@ -17,7 +18,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Predicate;
+
+import static run.halo.starter.MyUtils.getCreateOrderUrl;
+import static run.halo.starter.MyUtils.getMD5Hash;
 
 /**
  * 付费内容 API 端点
@@ -98,6 +103,52 @@ public class SettingEndpoint {
                 }
             }).switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "内容不存在")));
     }
+
+
+    @RequestMapping("/testSettings/{settingString}")
+    public Mono<Map<String, String>> testSetting(@PathVariable("settingString") String settingString) {
+
+        JSONObject jsonObject = JSONUtil.parseObj(settingString);
+        String serverUrl = jsonObject.getStr("serverUrl", "");
+        String key = jsonObject.getStr("key", "");
+        boolean isHttps = jsonObject.getBool("isHttps", false);
+        System.out.println("测试settingString:" + settingString);
+
+        Map<String, String> reponse = new HashMap<>();
+
+        String payId = UUID.randomUUID().toString();
+        double price = 0.01;
+
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("payId", payId);
+        data.put("price", price);
+        data.put("type", 1);
+        data.put("sign", getMD5Hash(payId + 1 + price + key));
+        System.out.println("data:"+data);
+        String result = HttpUtil.post(getCreateOrderUrl(serverUrl,isHttps), data);
+        System.out.println("测试创建订单result:"+result);
+        if(JSONUtil.parseObj(result).getInt("code",0) == 1){
+            reponse.put("message","测试成功");
+            reponse.put("status",PayStatus.SUCCESS.name());
+
+            //删除订单
+            JSONObject data3 = JSONUtil.parseObj(result).getJSONObject("data");
+            Map<String, Object> data2 = new HashMap<>();
+            data2.put("orderId", data3.getStr("orderId"));
+            data2.put("sign", getMD5Hash(data3.getStr("orderId") + key));
+            String result2 = HttpUtil.post(MyUtils.getCloseOrderUrl(serverUrl,isHttps), data2);
+            System.out.println("测试删除订单result:"+result2);
+
+        }else{
+            reponse.put("message",JSONUtil.parseObj(result).getStr("msg","测试失败"));
+            reponse.put("status",PayStatus.FAILED.name());
+
+        }
+
+        return Mono.just(reponse);
+    }
+
 }
 
 

@@ -6,7 +6,7 @@ function createPaymentModal(contentId, price) {
     
     modal.innerHTML = `
         <div class="payment-modal-content">
-            <button class="payment-close" onclick="closePaymentModal('${contentId}')">&times;</button>
+<!--            <button class="payment-close" onclick="closePaymentModal('${contentId}')">&times;</button>-->
             <div class="payment-title">购买付费内容</div>
             <div class="payment-amount">¥${price}</div>
             <div class="payment-qrcode" id="qrcode-${contentId}">
@@ -14,7 +14,7 @@ function createPaymentModal(contentId, price) {
             </div>
             <div class="payment-status" id="payment-status-${contentId}">正在等待支付...</div>
             <div class="payment-countdown" id="countdown-${contentId}">支付倒计时：<span>05:00</span></div>
-            <div class="payment-tips">请再四分钟内支付完成，最后一分钟尽量不要支付。支付成功后会有5至10秒的延迟，请不要关闭窗口！</div>
+            <div class="payment-tips">请不要随意更改支付金额！尽快支付，支付成功后会有5至10秒的延迟，请耐心等待，支付过程中请不要刷新窗口！</div>
         </div>
     `;
     
@@ -63,16 +63,17 @@ async function handlePurchase(contentId) {
             contentId: contentId
         })
 
-        const url = `/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/${clientAndContentString}`;
-
-
-        console.log('url:', url);
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
+        // const url = `/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/${clientAndContentString}`;
+        //
+        //
+        // console.log('url:', url);
+        // const response = await fetch(url, {
+        //     method: 'GET',
+        //     headers: {
+        //         'Content-Type': 'application/json'
+        //     }
+        // });
+        const response = await fetch(`/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/${clientAndContentString}`);
         
         if (!response.ok) {
             throw new Error('创建订单失败');
@@ -111,7 +112,7 @@ function checkPaymentStatus(contentId,orderId) {
     const pollInterval = setInterval(async () => {
 
         try {
-            const statusResponse = await fetch(`/apis/plugin-paywall.halo.run/v1alpha1/paywall/purchase/status/${orderId}`);
+            const statusResponse = await fetch(`/apis/plugin-paywall.halo.run/v1alpha1/paywall/status/${orderId}`);
             if (!statusResponse.ok) {
                 throw new Error('检查支付状态失败');
             }
