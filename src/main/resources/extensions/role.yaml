@@ -1,0 +1,12 @@
+apiVersion: v1alpha1
+kind: "Role"
+metadata:
+  name: template-plugin-paywall-anonymous-resources
+  labels:
+    halo.run/role-template: "true"
+#    halo.run/hidden: "true"
+    rbac.authorization.halo.run/aggregate-to-anonymous: "true"
+rules:
+  - apiGroups: [ "plugin-paywall.halo.run" ]
+    resources: [ "*" ]
+    verbs: [ "*" ]

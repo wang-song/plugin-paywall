@@ -234,23 +234,14 @@ public class PaywallEndpoint {
     }
 
 
-    /**
-     * 获取已购买内容列表接口
-     * 返回当前用户已成功支付的所有内容ID列表
-     *
-     * @return 已购买内容ID的列表
-     */
-    // @GetMapping("/purchased-contents")
-    // public Mono<List<String>> getPurchasedContents() {
-    //     // 构建查询条件：查找支付状态为 SUCCESS 的记录
-    //     Predicate<PaymentRecord> predicate = record ->
-    //         PayStatus.SUCCESS.name().equals(record.getSpec().getPayStatus());
-    //
-    //     // 查询并返回所有已购买的内容ID
-    //     return client.list(PaymentRecord.class, predicate, null)
-    //         .map(record -> record.getMetadata().getName())
-    //         .collectList();
-    // }
+    @GetMapping("/test")
+    public Mono<Map<String, String>> getPurchasedContents() {
+        Map<String, String> query = new HashMap<>();
+        query.put("status", "success");
+
+        // 查询并返回所有已购买的内容ID
+        return Mono.just(query);
+    }
 
 
 
