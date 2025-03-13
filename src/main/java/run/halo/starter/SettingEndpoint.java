@@ -58,7 +58,7 @@ public class SettingEndpoint {
     }
 
 
-    @RequestMapping("/saveSettings/{settingString}")
+    @PostMapping("/saveSettings/{settingString}")
     public Mono<MqSetting> saveSetting(@PathVariable("settingString") String settingString) {
 
         JSONObject jsonObject = JSONUtil.parseObj(settingString);
@@ -105,7 +105,7 @@ public class SettingEndpoint {
     }
 
 
-    @RequestMapping("/testSettings/{settingString}")
+    @PostMapping("/testSettings/{settingString}")
     public Mono<Map<String, String>> testSetting(@PathVariable("settingString") String settingString) {
 
         JSONObject jsonObject = JSONUtil.parseObj(settingString);

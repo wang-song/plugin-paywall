@@ -8,5 +8,5 @@ metadata:
     rbac.authorization.halo.run/aggregate-to-anonymous: "true"
 rules:
   - apiGroups: [ "plugin-paywall.halo.run" ]
-    resources: [ "*" ]
+    resources: [ "paywall" ]
     verbs: [ "*" ]
